@@ -6,12 +6,9 @@ require("jwt_utils.php");
 $http_method = $_SERVER['REQUEST_METHOD'];
 $bearer_token = get_bearer_token();
 
-if (is_jwt_valid($bearer_token)) {
-    echo isset($bearer_token);
-
+//utilisateur authentifié
+if (isset($_SERVER['Authorization']) && is_jwt_valid($bearer_token)) {
     switch ($http_method) {
-
-        // Cas de la méthode GET
         case "GET":
             //Découpage du payload
             $tokenParts = explode('.', $bearer_token);
@@ -81,39 +78,23 @@ if (is_jwt_valid($bearer_token)) {
                     }
                     deliver_response(200, "GET OK", $matchingData);
                     break;
-
-                //utilisateur non authentifié
-                default:
-                    //prepare
-                    $articles = $linkpdo->prepare("SELECT * FROM article");
-                    //execute
-                    $articles->execute();
-                    //fetch
-                    $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
-                    deliver_response(200, "GET OK", $matchingData);
-                    break;
             }
-
-            /// Envoi de la réponse au Client
-            //deliver_response(200, "Votre message", $matchingData);
             break;
 
-        /// Cas de la méthode POST
         case "POST":
-            /// Récupération des données envoyées par le Client
+            // Récupération des données envoyées par le Client
             $postedData = file_get_contents('php://input');
             $data = json_decode($postedData);
             $phrase = $data->phrase;
             $req = $linkpdo->prepare("INSERT INTO chuckn_facts (phrase, date_ajout) VALUES (:phrase, NOW())");
             $resExec = $req->execute(array('phrase' => $phrase));
 
-            /// Envoi de la réponse au Client
+            // Envoi de la réponse au Client
             deliver_response(201, "Votre message", NULL);
             break;
 
-        /// Cas de la méthode PUT
         case "PUT":
-            /// Récupération des données envoyées par le Client
+            // Récupération des données envoyées par le Client
             $postedData = file_get_contents('php://input');
             $data = json_decode($postedData);
             $phrase = $data->phrase;
@@ -121,23 +102,41 @@ if (is_jwt_valid($bearer_token)) {
             $req = $linkpdo->prepare("UPDATE chuckn_facts set phrase='" . $phrase . "', date_modif=NOW() where id=" . $id);
             $resExec = $req->execute();
 
-            /// Envoi de la réponse au Client
+            // Envoi de la réponse au Client
             deliver_response(201, "Votre message", NULL);
             break;
 
-        /// Cas de la méthode DELETE
         case "DELETE":
             //if (!empty($_GET['suppr'])) {
             $req = $linkpdo->prepare("DELETE FROM chuckn_facts WHERE id =" . $_GET['suppr']);
             $req->execute();
             //}
-            /// Envoi de la réponse au Client
+            // Envoi de la réponse au Client
             deliver_response(200, "Votre message", NULL);
             break;
 
-        /// Cas d'une autre méthode
+        // Cas d'une autre méthode
         default:
-            /// Envoi de la réponse au Client
+            // Envoi de la réponse au Client
+            deliver_response(501, "Méthode non supportée", NULL);
+            break;
+    }
+
+//utilisateur non authentifié
+} else {
+    switch ($http_method) {
+        case "GET":
+            //prepare
+            $articles = $linkpdo->prepare("SELECT * FROM article");
+            //execute
+            $articles->execute();
+            //fetch
+            $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
+            deliver_response(200, "GET OK", $matchingData);
+            break;
+
+        default:
+            // Envoi de la réponse au Client
             deliver_response(501, "Méthode non supportée", NULL);
             break;
     }
