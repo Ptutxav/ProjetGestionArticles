@@ -11,25 +11,51 @@ if (is_jwt_valid($bearer_token)) {
         /// Cas de la méthode GET
         case "GET":
             /// Récupération des critères de recherche envoyés par le Client
-            if (isset($_GET['id']) && !empty($_GET['id'])) {
-                $id = $_GET['id'];
-                $req = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ? ; 
+            $tokenParts = explode('.', $bearer_token);
+            $payload = base64_decode($tokenParts[1]);
+            $role = json_decode($payload)->role;
+            $username = json_decode($payload)->utilisateur;
+            switch($role) {
+                case "moderator":
+                    if (isset($_GET['id']) && !empty($_GET['id'])) {
+                        $id = $_GET['id'];
+                        $req = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ? ; 
                                                 SELECT liker.username as list_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?;
                                                 SELECT liker.username as list_dislike FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?;
                                                 SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?;
                                                 SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?;
                                                 ");
-                $req->execute(array($id,
-                                    $id,
-                                    $id,
-                                    $id,
-                                    $id));
-                $matchingData = $req->fetchAll();
-            } else {
-                $req = $linkpdo->prepare("SELECT * FROM article");
-                $req->execute();
-                $matchingData = $req->fetchAll();
+                        $req->execute(array($id, $id, $id, $id, $id));
+                        $matchingData = $req->fetchAll();
+                    } else {
+                        $req = $linkpdo->prepare("SELECT * FROM article");
+                        $req->execute();
+                        $matchingData = $req->fetchAll();
+                    }
+                    break;
+                case "publisher":
+                    if (isset($_GET['id']) && !empty($_GET['id'])) {
+                        $id = $_GET['id'];
+                        $req = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ? ;
+                                                SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?;
+                                                SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?;
+                                                SELECT * FROM article WHERE article.username = ?;
+                                                ");
+                        $req->execute(array($id, $id, $id, $username));
+                        $matchingData = $req->fetchAll();
+                    } else {
+                        $req = $linkpdo->prepare("SELECT * FROM article");
+                        $req->execute();
+                        $matchingData = $req->fetchAll();
+                    }
+                    break;
+                default:
+                    $req = $linkpdo->prepare("SELECT * FROM article");
+                    $req->execute();
+                    $matchingData = $req->fetchAll();
+                    break;
             }
+
             /// Envoi de la réponse au Client
             deliver_response(200, "Votre message", $matchingData);
             break;
