@@ -14,8 +14,12 @@ switch ($http_method){
         if (isValidUser($data['username'], $data['password'])) {
             $username = $data['username'];
 
+            $req = $linkpdo->prepare("SELECT role from utilisateur where username= ?");
+            $req->execute(array($username));
+            $data = $req->fetch();
+
             $headers = array('alg'=>'HS256', 'typ'=>'JWT');
-            $playload = array('username'=>$username, 'exp'=>(time() + 60));
+            $playload = array('utilisateur'=>$username,'role'=>$data[0], 'exp'=>(time() + 60));
 
             $jwt = generate_jwt($headers, $playload);
 
@@ -34,7 +38,7 @@ function isValidUser ($username, $password) {
     $req = $linkpdo->prepare("SELECT password from utilisateur where username = ?");
     $req->execute(array($username));
     if ($data = $req->fetch()) {
-        if ($data[0] == $password) {
+        if (password_verify($password, $data[0])) {
             return true;
         }
     } else {
