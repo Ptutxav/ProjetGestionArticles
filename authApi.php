@@ -1,5 +1,6 @@
 <?php
 require ('connexion.php');
+require ('jwt_utils.php');
 
 /// Paramétrage de l'entête HTTP (pour la réponse au Client)
 header("Content-Type:application/json");
@@ -28,12 +29,12 @@ switch ($http_method){
         deliver_response(400, "requete http reçue non traitée par le serveur", NULL);
 }
 
-function isValidUser ($username, $pwd) {
+function isValidUser ($username, $password) {
     require('connexion.php');
     $req = $linkpdo->prepare("SELECT password from utilisateur where username = ?");
     $req->execute(array($username));
     if ($data = $req->fetch()) {
-        if ($data == $pwd) {
+        if ($data[0] == $password) {
             return true;
         }
     } else {
