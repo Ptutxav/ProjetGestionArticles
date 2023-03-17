@@ -7,121 +7,125 @@ $http_method = $_SERVER['REQUEST_METHOD'];
 $bearer_token = get_bearer_token();
 
 //utilisateur authentifié
-if (isset($_SERVER['Authorization']) && is_jwt_valid($bearer_token)) {
-    switch ($http_method) {
-        case "GET":
-            //Découpage du payload
-            $tokenParts = explode('.', $bearer_token);
-            $payload = base64_decode($tokenParts[1]);
-            $role = json_decode($payload)->role;
-            $username = json_decode($payload)->utilisateur;
+if (get_authorization_header() != null) {
+    if (is_jwt_valid($bearer_token)) {
+        switch ($http_method) {
+            case "GET":
+                //Découpage du payload
+                $tokenParts = explode('.', $bearer_token);
+                $payload = base64_decode($tokenParts[1]);
+                $role = json_decode($payload)->role;
+                $username = json_decode($payload)->utilisateur;
 
-            switch ($role) {
-                case "moderator":
-                    if (isset($_GET['id']) && !empty($_GET['id'])) {
-                        $id = $_GET['id'];
-                        //prepare
-                        $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
-                        $list_likes = $linkpdo->prepare("SELECT liker.username as list_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?;");
-                        $list_dislikes = $linkpdo->prepare("SELECT liker.username as list_dislike FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?;");
-                        $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?;");
-                        $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?;");
-                        //execute
-                        $article->execute(array($id));
-                        $list_likes->execute(array($id));
-                        $list_dislikes->execute(array($id));
-                        $nb_likes->execute(array($id));
-                        $nb_dislikes->execute(array($id));
-                        //fetch
-                        $matchingData = $article->fetchAll(PDO::FETCH_ASSOC);
-                        $matchingData = array_merge($matchingData, $list_likes->fetchAll(PDO::FETCH_ASSOC));
-                        $matchingData = array_merge($matchingData, $list_dislikes->fetchAll(PDO::FETCH_ASSOC));
-                        $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
-                        $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
-                        echo "id\n";
-                    } else {
-                        $articles = $linkpdo->prepare("SELECT * FROM article");
-                        $articles->execute();
-                        $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
-                        echo "noid\n";
-                    }
-                    deliver_response(200, "GET OK", $matchingData);
-                    break;
+                switch ($role) {
+                    case "moderator":
+                        if (isset($_GET['id']) && !empty($_GET['id'])) {
+                            $id = $_GET['id'];
+                            //prepare
+                            $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
+                            $list_likes = $linkpdo->prepare("SELECT liker.username as list_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?;");
+                            $list_dislikes = $linkpdo->prepare("SELECT liker.username as list_dislike FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?;");
+                            $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?;");
+                            $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?;");
+                            //execute
+                            $article->execute(array($id));
+                            $list_likes->execute(array($id));
+                            $list_dislikes->execute(array($id));
+                            $nb_likes->execute(array($id));
+                            $nb_dislikes->execute(array($id));
+                            //fetch
+                            $matchingData = $article->fetchAll(PDO::FETCH_ASSOC);
+                            $matchingData = array_merge($matchingData, $list_likes->fetchAll(PDO::FETCH_ASSOC));
+                            $matchingData = array_merge($matchingData, $list_dislikes->fetchAll(PDO::FETCH_ASSOC));
+                            $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
+                            $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
+                            echo "id\n";
+                        } else {
+                            $articles = $linkpdo->prepare("SELECT * FROM article");
+                            $articles->execute();
+                            $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
+                            echo "noid\n";
+                        }
+                        deliver_response(200, "GET OK", $matchingData);
+                        break;
 
-                case "publisher":
-                    if (isset($_GET['id']) && !empty($_GET['id'])) {
-                        $id = $_GET['id'];
-                        //prepare
-                        $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
-                        $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?");
-                        $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?");
-                        //execute
-                        $article->execute(array($id));
-                        $nb_likes->execute(array($id));
-                        $nb_dislikes->execute(array($id));
-                        //fetch
-                        $matchingData = $article->fetchAll(PDO::FETCH_ASSOC);
-                        $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
-                        $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
-                        echo "id\n";
-                    } else {
-                        //prepare
-                        $articles = $linkpdo->prepare("SELECT * FROM article");
-                        $own_articles = $linkpdo->prepare("SELECT * FROM article WHERE article.username = ?");
-                        //execute
-                        $articles->execute();
-                        $own_articles->execute(array($username));
-                        //fetch
-                        $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
-                        $matchingData = array_merge($matchingData, $own_articles->fetchAll(PDO::FETCH_ASSOC));
-                        echo "noid\n";
-                    }
-                    deliver_response(200, "GET OK", $matchingData);
-                    break;
-            }
-            break;
+                    case "publisher":
+                        if (isset($_GET['id']) && !empty($_GET['id'])) {
+                            $id = $_GET['id'];
+                            //prepare
+                            $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
+                            $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?");
+                            $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?");
+                            //execute
+                            $article->execute(array($id));
+                            $nb_likes->execute(array($id));
+                            $nb_dislikes->execute(array($id));
+                            //fetch
+                            $matchingData = $article->fetchAll(PDO::FETCH_ASSOC);
+                            $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
+                            $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
+                            echo "id\n";
+                        } else {
+                            //prepare
+                            $articles = $linkpdo->prepare("SELECT * FROM article");
+                            $own_articles = $linkpdo->prepare("SELECT * FROM article WHERE article.username = ?");
+                            //execute
+                            $articles->execute();
+                            $own_articles->execute(array($username));
+                            //fetch
+                            $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
+                            $matchingData = array_merge($matchingData, $own_articles->fetchAll(PDO::FETCH_ASSOC));
+                            echo "noid\n";
+                        }
+                        deliver_response(200, "GET OK", $matchingData);
+                        break;
+                }
+                break;
 
-        case "POST":
-            // Récupération des données envoyées par le Client
-            $postedData = file_get_contents('php://input');
-            $data = json_decode($postedData);
-            $phrase = $data->phrase;
-            $req = $linkpdo->prepare("INSERT INTO chuckn_facts (phrase, date_ajout) VALUES (:phrase, NOW())");
-            $resExec = $req->execute(array('phrase' => $phrase));
+            case "POST":
+                // Récupération des données envoyées par le Client
+                $postedData = file_get_contents('php://input');
+                $data = json_decode($postedData);
+                $phrase = $data->phrase;
+                $req = $linkpdo->prepare("INSERT INTO chuckn_facts (phrase, date_ajout) VALUES (:phrase, NOW())");
+                $resExec = $req->execute(array('phrase' => $phrase));
 
-            // Envoi de la réponse au Client
-            deliver_response(201, "Votre message", NULL);
-            break;
+                // Envoi de la réponse au Client
+                deliver_response(201, "Votre message", NULL);
+                break;
 
-        case "PUT":
-            // Récupération des données envoyées par le Client
-            $postedData = file_get_contents('php://input');
-            $data = json_decode($postedData);
-            $phrase = $data->phrase;
-            $id = $data->id;
-            $req = $linkpdo->prepare("UPDATE chuckn_facts set phrase='" . $phrase . "', date_modif=NOW() where id=" . $id);
-            $resExec = $req->execute();
+            case "PUT":
+                // Récupération des données envoyées par le Client
+                $postedData = file_get_contents('php://input');
+                $data = json_decode($postedData);
+                $phrase = $data->phrase;
+                $id = $data->id;
+                $req = $linkpdo->prepare("UPDATE chuckn_facts set phrase='" . $phrase . "', date_modif=NOW() where id=" . $id);
+                $resExec = $req->execute();
 
-            // Envoi de la réponse au Client
-            deliver_response(201, "Votre message", NULL);
-            break;
+                // Envoi de la réponse au Client
+                deliver_response(201, "Votre message", NULL);
+                break;
 
-        case "DELETE":
-            //if (!empty($_GET['suppr'])) {
-            $req = $linkpdo->prepare("DELETE FROM chuckn_facts WHERE id =" . $_GET['suppr']);
-            $req->execute();
-            //}
-            // Envoi de la réponse au Client
-            deliver_response(200, "Votre message", NULL);
-            break;
+            case "DELETE":
+                //if (!empty($_GET['suppr'])) {
+                $req = $linkpdo->prepare("DELETE FROM chuckn_facts WHERE id =" . $_GET['suppr']);
+                $req->execute();
+                //}
+                // Envoi de la réponse au Client
+                deliver_response(200, "Votre message", NULL);
+                break;
 
-        // Cas d'une autre méthode
-        default:
-            // Envoi de la réponse au Client
-            deliver_response(501, "Méthode non supportée", NULL);
-            break;
+            // Cas d'une autre méthode
+            default:
+                // Envoi de la réponse au Client
+                deliver_response(501, "Méthode non supportée", NULL);
+                break;
+        }
+    //token invalide ou expiré
+    } else {
+        deliver_response(401, "Accès Refusé : Token invalide ou expiré", NULL);
     }
-
 //utilisateur non authentifié
 } else {
     switch ($http_method) {

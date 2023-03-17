@@ -19,7 +19,7 @@ switch ($http_method){
             $data = $req->fetch();
 
             $headers = array('alg'=>'HS256', 'typ'=>'JWT');
-            $playload = array('utilisateur'=>$username,'role'=>$data[0], 'exp'=>(time() + 6000));
+            $playload = array('utilisateur'=>$username,'role'=>$data[0], 'exp'=>(time() + 600));
 
             $jwt = generate_jwt($headers, $playload);
 
