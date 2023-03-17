@@ -19,11 +19,11 @@ switch ($http_method){
             $data = $req->fetch();
 
             $headers = array('alg'=>'HS256', 'typ'=>'JWT');
-            $playload = array('utilisateur'=>$username,'role'=>$data[0], 'exp'=>(time() + 60));
+            $playload = array('utilisateur'=>$username,'role'=>$data[0], 'exp'=>(time() + 6000));
 
             $jwt = generate_jwt($headers, $playload);
 
-            deliver_response(200, "connexion établie", NULL);
+            deliver_response(200, "connexion établie", $jwt);
         } else {
             deliver_response(400, "username ou mot de passe invalide", NULL);
         }
