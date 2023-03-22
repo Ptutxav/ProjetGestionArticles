@@ -42,7 +42,7 @@ if (get_authorization_header() != null) {
                                 $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
                                 deliver_response(200, "GET OK", $matchingData);
                             } else {
-                                deliver_response(400, "Bad Request : id saisie incorrect", null);
+                                deliver_response(404, "Not found", null);                                
                             }
                         } else {
                             $articles = $linkpdo->prepare("SELECT * FROM article");
@@ -68,7 +68,7 @@ if (get_authorization_header() != null) {
                                 $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
                                 deliver_response(200, "GET OK", $matchingData);
                             } else {
-                                deliver_response(400, "Bad Request : id saisie incorrect", null);                                
+                                deliver_response(404, "Not found", null);                                
                             }
                         } else {
                             //prepare
