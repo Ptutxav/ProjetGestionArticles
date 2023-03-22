@@ -9,14 +9,13 @@ $bearer_token = get_bearer_token();
 //utilisateur authentifié
 if (get_authorization_header() != null) {
     if (is_jwt_valid($bearer_token)) {
+        //Découpage du payload
+        $tokenParts = explode('.', $bearer_token);
+        $payload = base64_decode($tokenParts[1]);
+        $role = json_decode($payload)->role;
+        $username = json_decode($payload)->utilisateur;
         switch ($http_method) {
             case "GET":
-                //Découpage du payload
-                $tokenParts = explode('.', $bearer_token);
-                $payload = base64_decode($tokenParts[1]);
-                $role = json_decode($payload)->role;
-                $username = json_decode($payload)->utilisateur;
-
                 switch ($role) {
                     case "moderator":
                         if (isset($_GET['id'])) {

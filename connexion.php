@@ -11,6 +11,7 @@
     }
     ///Capture des erreurs éventuelles
     catch (Exception $e) {
+        deliver_response(500, "bug bdd", $e);
         die('Erreur : ' . $e->getMessage());
     }
     
