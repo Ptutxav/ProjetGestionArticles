@@ -19,7 +19,8 @@ if (get_authorization_header() != null) {
 
                 switch ($role) {
                     case "moderator":
-                        if (isset($_GET['id']) && !empty($_GET['id'])) {
+                        if (isset($_GET['id']) ) {
+
                             $id = $_GET['id'];
                             //prepare
                             $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
@@ -34,23 +35,24 @@ if (get_authorization_header() != null) {
                             $nb_likes->execute(array($id));
                             $nb_dislikes->execute(array($id));
                             //fetch
-                            $matchingData = $article->fetchAll(PDO::FETCH_ASSOC);
-                            $matchingData = array_merge($matchingData, $list_likes->fetchAll(PDO::FETCH_ASSOC));
-                            $matchingData = array_merge($matchingData, $list_dislikes->fetchAll(PDO::FETCH_ASSOC));
-                            $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
-                            $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
-                            echo "id\n";
+                            if ($matchingData = $article->fetch(PDO::FETCH_ASSOC)){
+                                $matchingData = array_merge($matchingData, $list_likes->fetchAll(PDO::FETCH_ASSOC));
+                                $matchingData = array_merge($matchingData, $list_dislikes->fetchAll(PDO::FETCH_ASSOC));
+                                $matchingData = array_merge($matchingData, $nb_likes->fetch(PDO::FETCH_ASSOC));
+                                $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
+                                deliver_response(200, "GET OK", $matchingData);
+                            } else {
+                                deliver_response(400, "Bad Request : id saisie incorrect", null);
+                            }
                         } else {
                             $articles = $linkpdo->prepare("SELECT * FROM article");
                             $articles->execute();
                             $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
-                            echo "noid\n";
                         }
-                        deliver_response(200, "GET OK", $matchingData);
                         break;
 
                     case "publisher":
-                        if (isset($_GET['id']) && !empty($_GET['id'])) {
+                        if (isset($_GET['id'])) {
                             $id = $_GET['id'];
                             //prepare
                             $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
@@ -61,10 +63,13 @@ if (get_authorization_header() != null) {
                             $nb_likes->execute(array($id));
                             $nb_dislikes->execute(array($id));
                             //fetch
-                            $matchingData = $article->fetchAll(PDO::FETCH_ASSOC);
-                            $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
-                            $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
-                            echo "id\n";
+                            if ($matchingData = $article->fetch(PDO::FETCH_ASSOC)) {
+                                $matchingData = array_merge($matchingData, $nb_likes->fetch(PDO::FETCH_ASSOC));
+                                $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
+                                deliver_response(200, "GET OK", $matchingData);
+                            } else {
+                                deliver_response(400, "Bad Request : id saisie incorrect", null);                                
+                            }
                         } else {
                             //prepare
                             $articles = $linkpdo->prepare("SELECT * FROM article");
@@ -75,9 +80,7 @@ if (get_authorization_header() != null) {
                             //fetch
                             $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
                             $matchingData = array_merge($matchingData, $own_articles->fetchAll(PDO::FETCH_ASSOC));
-                            echo "noid\n";
                         }
-                        deliver_response(200, "GET OK", $matchingData);
                         break;
                 }
                 break;
@@ -86,12 +89,7 @@ if (get_authorization_header() != null) {
                 // Récupération des données envoyées par le Client
                 $postedData = file_get_contents('php://input');
                 $data = json_decode($postedData);
-                $phrase = $data->phrase;
-                $req = $linkpdo->prepare("INSERT INTO chuckn_facts (phrase, date_ajout) VALUES (:phrase, NOW())");
-                $resExec = $req->execute(array('phrase' => $phrase));
-
-                // Envoi de la réponse au Client
-                deliver_response(201, "Votre message", NULL);
+                
                 break;
 
             case "PUT":
