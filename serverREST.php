@@ -19,8 +19,7 @@ if (get_authorization_header() != null) {
 
                 switch ($role) {
                     case "moderator":
-                        if (isset($_GET['id']) ) {
-
+                        if (isset($_GET['id'])) {
                             $id = $_GET['id'];
                             //prepare
                             $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
@@ -106,12 +105,28 @@ if (get_authorization_header() != null) {
                 break;
 
             case "DELETE":
-                //if (!empty($_GET['suppr'])) {
-                $req = $linkpdo->prepare("DELETE FROM chuckn_facts WHERE id =" . $_GET['suppr']);
-                $req->execute();
-                //}
-                // Envoi de la réponse au Client
-                deliver_response(200, "Votre message", NULL);
+                //Découpage du payload
+                $tokenParts = explode('.', $bearer_token);
+                $payload = base64_decode($tokenParts[1]);
+                $role = json_decode($payload)->role;
+                $username = json_decode($payload)->utilisateur;
+
+                switch ($role) {
+                    case "moderator":
+                        if (isset($_GET['id'])) {
+                            $delete = $linkpdo->prepare("DELETE FROM article WHERE article.id_article = ?");
+                            $delete->execute(array($_GET['id']));
+
+                            if($delete->rowCount() < 1) {
+                                deliver_response(404, "Not found", NULL);
+                            } else {
+                                deliver_response(200, "OK : suppression effectuée avec succès", NULL);
+                            }
+                        } else {
+                            deliver_response(400, "Bad request : id incorrect", NULL);
+                        }
+                        break;
+                }
                 break;
 
             // Cas d'une autre méthode
