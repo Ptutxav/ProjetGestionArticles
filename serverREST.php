@@ -104,12 +104,6 @@ if (get_authorization_header() != null) {
                 break;
 
             case "DELETE":
-                //Découpage du payload
-                $tokenParts = explode('.', $bearer_token);
-                $payload = base64_decode($tokenParts[1]);
-                $role = json_decode($payload)->role;
-                $username = json_decode($payload)->utilisateur;
-
                 switch ($role) {
                     case "moderator":
                         if (isset($_GET['id'])) {
@@ -118,6 +112,19 @@ if (get_authorization_header() != null) {
 
                             if($delete->rowCount() < 1) {
                                 deliver_response(404, "Not found", NULL);
+                            } else {
+                                deliver_response(200, "OK : suppression effectuée avec succès", NULL);
+                            }
+                        } else {
+                            deliver_response(400, "Bad request : id incorrect", NULL);
+                        }
+                        break;
+                    case "publisher":
+                        if (isset($_GET['id'])) {
+                            $delete = $linkpdo->prepare("DELETE FROM article WHERE article.id_article = ? AND article.username = ?");
+                            $delete->execute(array($_GET['id'], $username));
+                            if($delete->rowCount() < 1) {
+                                deliver_response(404, "Not found or insufficient permissions", NULL);
                             } else {
                                 deliver_response(200, "OK : suppression effectuée avec succès", NULL);
                             }
@@ -136,7 +143,7 @@ if (get_authorization_header() != null) {
         }
     //token invalide ou expiré
     } else {
-        deliver_response(401, "Accès Refusé : Token invalide ou expiré", NULL);
+        deliver_response(401, "Unauthorized : expired or invalid token", NULL);
     }
 //utilisateur non authentifié
 } else {
@@ -153,7 +160,7 @@ if (get_authorization_header() != null) {
 
         default:
             // Envoi de la réponse au Client
-            deliver_response(501, "Méthode non supportée", NULL);
+            deliver_response(401, "Unauthorized : insufficient permissions", NULL);
             break;
     }
 }
