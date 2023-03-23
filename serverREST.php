@@ -52,22 +52,7 @@ if (get_authorization_header() != null) {
                     case "publisher":
                         if (isset($_GET['id'])) {
                             $id = $_GET['id'];
-                            //prepare
-                            $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
-                            $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?");
-                            $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?");
-                            //execute
-                            $article->execute(array($id));
-                            $nb_likes->execute(array($id));
-                            $nb_dislikes->execute(array($id));
-                            //fetch
-                            if ($matchingData = $article->fetch(PDO::FETCH_ASSOC)) {
-                                $matchingData = array_merge($matchingData, $nb_likes->fetch(PDO::FETCH_ASSOC));
-                                $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
-                                deliver_response(200, "GET OK", $matchingData);
-                            } else {
-                                deliver_response(404, "Not found", null);                                
-                            }
+                            getPublisherID($id, 'Get ok !');
                         } else {
                             //prepare
                             $articles = $linkpdo->prepare("SELECT * FROM article");
@@ -84,10 +69,21 @@ if (get_authorization_header() != null) {
                 break;
 
             case "POST":
-                // Récupération des données envoyées par le Client
-                $postedData = file_get_contents('php://input');
-                $data = json_decode($postedData);
-                
+                if ($role == "publisher") {
+                    // Récupération des données envoyées par le Client
+                    $postedData = file_get_contents('php://input');
+                    $data = json_decode($postedData, true);
+                    if (isset($data['contenu'])) {
+                        $req = $linkpdo->prepare("INSERT into article(date_publication, contenu, username) values (?,?,?)");
+                        $req->execute(array(date('Y-m-d H:i:s'), $data['contenu'], $username));
+                        if ($req->rowCount() < 1) {
+                            deliver_response(500, "Erreur serveur", null);
+                            break;
+                        }
+                        $pubId = $linkpdo->lastInsertId();
+                        getPublisher($pubId, 'article ajouté avec succès');
+                    }
+                }
                 break;
 
             case "PUT":
@@ -177,4 +173,24 @@ function deliver_response($status, $status_message, $data)
     // Mapping de la réponse au format JSON
     $json_response = json_encode($response);
     echo $json_response;
+}
+
+function getPublisherID($id, $mes) {
+    require('connexion.php');
+    //prepare
+    $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
+    $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?");
+    $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?");
+    //execute
+    $article->execute(array($id));
+    $nb_likes->execute(array($id));
+    $nb_dislikes->execute(array($id));
+    //fetch
+    if ($matchingData = $article->fetch(PDO::FETCH_ASSOC)) {
+        $matchingData = array_merge($matchingData, $nb_likes->fetch(PDO::FETCH_ASSOC));
+        $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
+        deliver_response(200, $mes, $matchingData);
+    } else {
+        deliver_response(404, "Not found", null);                                
+    }
 }
