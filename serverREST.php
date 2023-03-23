@@ -54,15 +54,22 @@ if (get_authorization_header() != null) {
                             $id = $_GET['id'];
                             getPublisherID($id, 'Get ok !');
                         } else {
-                            //prepare
-                            $articles = $linkpdo->prepare("SELECT * FROM article");
-                            $own_articles = $linkpdo->prepare("SELECT * FROM article WHERE article.username = ?");
+                           //prepare
+                            $article = $linkpdo->prepare("SELECT * FROM article");
+                            $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1");
+                            $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1");
                             //execute
-                            $articles->execute();
-                            $own_articles->execute(array($username));
+                            $article->execute();
+                            $nb_likes->execute();
+                            $nb_dislikes->execute();
                             //fetch
-                            $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
-                            $matchingData = array_merge($matchingData, $own_articles->fetchAll(PDO::FETCH_ASSOC));
+                            if ($matchingData = $article->fetchAll(PDO::FETCH_ASSOC)) {
+                                $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
+                                $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
+                                deliver_response(200, $mes, $matchingData);
+                            } else {
+                                deliver_response(404, "Not found", null);                                
+                            }
                         }
                         break;
                 }
