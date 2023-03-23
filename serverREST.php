@@ -60,10 +60,9 @@ if (get_authorization_header() != null) {
                             $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1");
                             //execute
                             $article->execute();
-                            $nb_likes->execute();
-                            $nb_dislikes->execute();
                             //fetch
                             if ($matchingData = $article->fetchAll(PDO::FETCH_ASSOC)) {
+                                foreach()
                                 $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
                                 $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
                                 deliver_response(200, $mes, $matchingData);
