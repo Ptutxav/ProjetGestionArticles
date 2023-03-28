@@ -93,17 +93,37 @@ if (get_authorization_header() != null) {
                 break;
 
             case "PUT":
-                // Récupération des données envoyées par le Client
-                $postedData = file_get_contents('php://input');
-                $data = json_decode($postedData);
-                $phrase = $data->phrase;
-                $id = $data->id;
-                $req = $linkpdo->prepare("UPDATE chuckn_facts set phrase='" . $phrase . "', date_modif=NOW() where id=" . $id);
-                $resExec = $req->execute();
-
-                // Envoi de la réponse au Client
-                deliver_response(201, "Votre message", NULL);
-                break;
+                if ($role == "publisher" && isset($_GET['id'])) {
+                    $getArticleWithId = $linkpdo->prepare("SELECT username FROM article WHERE id_article = ?");
+                    $getArticleWithId->execute(array($_GET['id']));
+                    if ($getArticleWithId->rowCount() >= 1) {
+                        $dataUsername = $getArticleWithId->fetch();
+                        $usernameToCompare = $dataUsername[0];
+                        if($usernameToCompare == $username) {
+                            $postedData = file_get_contents('php://input');
+                            $data = json_decode($postedData);
+                            $contenu = $data->contenu;
+                            if($contenu != null) {
+                                $updateArticle = $linkpdo->prepare("UPDATE article SET contenu = ? WHERE id_article = ?");
+                                $updateArticle->execute(array($contenu, $_GET['id']));
+                                if ($getArticleWithId->rowCount() >= 1) {
+                                    deliver_response(201, "Update successful", null);
+                                } else {
+                                    deliver_response(500, "Internal server error", null);
+                                }
+                            } else {
+                                deliver_response(400, "Bad request : contenu null", null);
+                            }
+                        } else {
+                            deliver_response(401, "Unauthorized", null);
+                        }
+                    } else {
+                        deliver_response(404, "Not found", null);
+                    }
+                } else {
+                    deliver_response(401, "Unauthorized", null);
+                }
+               break;
 
             case "DELETE":
                 switch ($role) {
