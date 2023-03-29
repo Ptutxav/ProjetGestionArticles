@@ -40,7 +40,7 @@ if (get_authorization_header() != null) {
                                 $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
                                 deliver_response(200, "GET OK", $matchingData);
                             } else {
-                                deliver_response(404, "Not found", null);                                
+                                deliver_response(404, "Not found", null);
                             }
                         } else {
                             $articles = $linkpdo->prepare("SELECT * FROM article");
@@ -94,28 +94,54 @@ if (get_authorization_header() != null) {
 
             case "PUT":
                 if ($role == "publisher" && isset($_GET['id'])) {
-                    $getArticleWithId = $linkpdo->prepare("SELECT username FROM article WHERE id_article = ?");
+                    $getArticleWithId = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
                     $getArticleWithId->execute(array($_GET['id']));
+                    //si l'article existe
                     if ($getArticleWithId->rowCount() >= 1) {
-                        $dataUsername = $getArticleWithId->fetch();
-                        $usernameToCompare = $dataUsername[0];
-                        if($usernameToCompare == $username) {
-                            $postedData = file_get_contents('php://input');
-                            $data = json_decode($postedData);
-                            $contenu = $data->contenu;
-                            if($contenu != null) {
-                                $updateArticle = $linkpdo->prepare("UPDATE article SET contenu = ? WHERE id_article = ?");
-                                $updateArticle->execute(array($contenu, $_GET['id']));
-                                if ($getArticleWithId->rowCount() >= 1) {
+                        //liker
+                        if (isset($_GET['like']) && !isset($_GET['dislike'])) {
+                            $selectLike = $linkpdo->prepare("SELECT * FROM liker WHERE id_article = ? AND username = ?");
+                            $selectLike->execute(array($_GET['id'], $username));
+                            if($selectLike->rowCount() >= 1) {
+                                echo "hello";
+                                $updateLike = $linkpdo->prepare("UPDATE liker SET like_status = 1 WHERE id_article = ? AND username = ?");
+                                $updateLike->execute(array($_GET['id'], $username));
+                            } else {
+                                $insertLike = $linkpdo->prepare("INSERT INTO liker (id_article, username, like_status) values (?, ?, 1)");
+                                var_dump($username);
+                                $insertLike->execute(array($_GET['id'], $username));
+                            }
+                            deliver_response(200, "OK", null);
+                        //disliker
+                        } elseif (!isset($_GET['like']) && isset($_GET['dislike'])) {
+                            $selectLike = $linkpdo->prepare("SELECT * FROM liker WHERE id_article = ? AND username = ?");
+                            $selectLike->execute(array($_GET['id'], $username));
+                            if($selectLike->rowCount() >= 1) {
+                                $updateDislike = $linkpdo->prepare("UPDATE liker SET like_status = -1 WHERE id_article = ? AND username = ?");
+                                $updateDislike->execute(array($_GET['id'], $username));
+                            } else {
+                                $insertDislike = $linkpdo->prepare("INSERT INTO liker (id_article, username, like_status) values (?, ?, -1)");
+                                $insertDislike->execute(array($_GET['id'], $username));
+                            }
+                            deliver_response(200, "OK", null);
+
+                        } else {
+                            $dataUsername = $getArticleWithId->fetch();
+                            $usernameToCompare = $dataUsername['username'];
+                            if ($usernameToCompare == $username) {
+                                $postedData = file_get_contents('php://input');
+                                $data = json_decode($postedData);
+                                $contenu = $data->contenu;
+                                if ($contenu != null) {
+                                    $updateArticle = $linkpdo->prepare("UPDATE article SET contenu = ? WHERE id_article = ?");
+                                    $updateArticle->execute(array($contenu, $_GET['id']));
                                     deliver_response(201, "Update successful", null);
                                 } else {
-                                    deliver_response(500, "Internal server error", null);
+                                    deliver_response(400, "Bad request : contenu null", null);
                                 }
                             } else {
-                                deliver_response(400, "Bad request : contenu null", null);
+                                deliver_response(401, "Unauthorized", null);
                             }
-                        } else {
-                            deliver_response(401, "Unauthorized", null);
                         }
                     } else {
                         deliver_response(404, "Not found", null);
@@ -123,7 +149,7 @@ if (get_authorization_header() != null) {
                 } else {
                     deliver_response(401, "Unauthorized", null);
                 }
-               break;
+                break;
 
             case "DELETE":
                 switch ($role) {
@@ -132,7 +158,7 @@ if (get_authorization_header() != null) {
                             $delete = $linkpdo->prepare("DELETE FROM article WHERE article.id_article = ?");
                             $delete->execute(array($_GET['id']));
 
-                            if($delete->rowCount() < 1) {
+                            if ($delete->rowCount() < 1) {
                                 deliver_response(404, "Not found", NULL);
                             } else {
                                 deliver_response(200, "OK : suppression effectuée avec succès", NULL);
@@ -145,7 +171,7 @@ if (get_authorization_header() != null) {
                         if (isset($_GET['id'])) {
                             $delete = $linkpdo->prepare("DELETE FROM article WHERE article.id_article = ? AND article.username = ?");
                             $delete->execute(array($_GET['id'], $username));
-                            if($delete->rowCount() < 1) {
+                            if ($delete->rowCount() < 1) {
                                 deliver_response(404, "Not found or insufficient permissions", NULL);
                             } else {
                                 deliver_response(200, "OK : suppression effectuée avec succès", NULL);
@@ -163,7 +189,7 @@ if (get_authorization_header() != null) {
                 deliver_response(501, "Méthode non supportée", NULL);
                 break;
         }
-    //token invalide ou expiré
+        //token invalide ou expiré
     } else {
         deliver_response(401, "Unauthorized : expired or invalid token", NULL);
     }
@@ -201,7 +227,8 @@ function deliver_response($status, $status_message, $data)
     echo $json_response;
 }
 
-function getPublisherID($id, $mes) {
+function getPublisherID($id, $mes)
+{
     require('connexion.php');
     //prepare
     $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
@@ -217,6 +244,6 @@ function getPublisherID($id, $mes) {
         $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
         deliver_response(200, $mes, $matchingData);
     } else {
-        deliver_response(404, "Not found", null);                                
+        deliver_response(404, "Not found", null);
     }
 }
