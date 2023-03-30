@@ -157,7 +157,7 @@ if (get_authorization_header() != null) {
                             deliver_response(200, "OK", null);
 
                         } else {
-                            deliver_response(400, "Bad request");
+                            deliver_response(400, "Bad request", null);
                         }
                     } else {
                         deliver_response(404, "Not found", null);
