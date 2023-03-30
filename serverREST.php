@@ -33,7 +33,7 @@ if (get_authorization_header() != null) {
                             $nb_likes->execute(array($id));
                             $nb_dislikes->execute(array($id));
                             //fetch
-                            if ($matchingData = $article->fetch(PDO::FETCH_ASSOC)){
+                            if ($matchingData = $article->fetch(PDO::FETCH_ASSOC)) {
                                 $matchingData = array_merge($matchingData, $list_likes->fetchAll(PDO::FETCH_ASSOC));
                                 $matchingData = array_merge($matchingData, $list_dislikes->fetchAll(PDO::FETCH_ASSOC));
                                 $matchingData = array_merge($matchingData, $nb_likes->fetch(PDO::FETCH_ASSOC));
@@ -54,7 +54,7 @@ if (get_authorization_header() != null) {
                             $id = $_GET['id'];
                             getPublisherID($id, 'Get ok !');
                         } else {
-                           //prepare
+                            //prepare
                             $article = $linkpdo->prepare("SELECT * FROM article");
                             $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1");
                             $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1");
@@ -62,12 +62,12 @@ if (get_authorization_header() != null) {
                             $article->execute();
                             //fetch
                             if ($matchingData = $article->fetchAll(PDO::FETCH_ASSOC)) {
-                                foreach()
-                                $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
+                                $mes = "";
+                                    $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
                                 $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
                                 deliver_response(200, $mes, $matchingData);
                             } else {
-                                deliver_response(404, "Not found", null);                                
+                                deliver_response(404, "Not found", null);
                             }
                         }
                         break;
@@ -98,25 +98,51 @@ if (get_authorization_header() != null) {
                     $getArticleWithId->execute(array($_GET['id']));
                     //si l'article existe
                     if ($getArticleWithId->rowCount() >= 1) {
+                        $dataUsername = $getArticleWithId->fetch();
+                        $usernameToCompare = $dataUsername['username'];
+                        if ($usernameToCompare == $username) {
+                            $postedData = file_get_contents('php://input');
+                            $data = json_decode($postedData);
+                            $contenu = $data->contenu;
+                            if ($contenu != null) {
+                                $updateArticle = $linkpdo->prepare("UPDATE article SET contenu = ? WHERE id_article = ?");
+                                $updateArticle->execute(array($contenu, $_GET['id']));
+                                deliver_response(201, "Update successful", null);
+                            } else {
+                                deliver_response(400, "Bad request : contenu null", null);
+                            }
+                        }
+                    } else {
+                        deliver_response(404, "Not found", null);
+                    }
+                } else {
+                    deliver_response(401, "Unauthorized", null);
+                }
+                break;
+
+            case "PATCH":
+                if ($role == "publisher" && isset($_GET['id'])) {
+                    $getArticleWithId = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
+                    $getArticleWithId->execute(array($_GET['id']));
+                    //si l'article existe
+                    if ($getArticleWithId->rowCount() >= 1) {
                         //liker
                         if (isset($_GET['like']) && !isset($_GET['dislike'])) {
                             $selectLike = $linkpdo->prepare("SELECT * FROM liker WHERE id_article = ? AND username = ?");
                             $selectLike->execute(array($_GET['id'], $username));
-                            if($selectLike->rowCount() >= 1) {
-                                echo "hello";
+                            if ($selectLike->rowCount() >= 1) {
                                 $updateLike = $linkpdo->prepare("UPDATE liker SET like_status = 1 WHERE id_article = ? AND username = ?");
                                 $updateLike->execute(array($_GET['id'], $username));
                             } else {
                                 $insertLike = $linkpdo->prepare("INSERT INTO liker (id_article, username, like_status) values (?, ?, 1)");
-                                var_dump($username);
                                 $insertLike->execute(array($_GET['id'], $username));
                             }
                             deliver_response(200, "OK", null);
-                        //disliker
+                            //disliker
                         } elseif (!isset($_GET['like']) && isset($_GET['dislike'])) {
                             $selectLike = $linkpdo->prepare("SELECT * FROM liker WHERE id_article = ? AND username = ?");
                             $selectLike->execute(array($_GET['id'], $username));
-                            if($selectLike->rowCount() >= 1) {
+                            if ($selectLike->rowCount() >= 1) {
                                 $updateDislike = $linkpdo->prepare("UPDATE liker SET like_status = -1 WHERE id_article = ? AND username = ?");
                                 $updateDislike->execute(array($_GET['id'], $username));
                             } else {
@@ -126,22 +152,7 @@ if (get_authorization_header() != null) {
                             deliver_response(200, "OK", null);
 
                         } else {
-                            $dataUsername = $getArticleWithId->fetch();
-                            $usernameToCompare = $dataUsername['username'];
-                            if ($usernameToCompare == $username) {
-                                $postedData = file_get_contents('php://input');
-                                $data = json_decode($postedData);
-                                $contenu = $data->contenu;
-                                if ($contenu != null) {
-                                    $updateArticle = $linkpdo->prepare("UPDATE article SET contenu = ? WHERE id_article = ?");
-                                    $updateArticle->execute(array($contenu, $_GET['id']));
-                                    deliver_response(201, "Update successful", null);
-                                } else {
-                                    deliver_response(400, "Bad request : contenu null", null);
-                                }
-                            } else {
-                                deliver_response(401, "Unauthorized", null);
-                            }
+                            deliver_response(400, "Bad request");
                         }
                     } else {
                         deliver_response(404, "Not found", null);
