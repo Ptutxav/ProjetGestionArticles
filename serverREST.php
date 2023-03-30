@@ -125,46 +125,42 @@ if (get_authorization_header() != null) {
                 break;
 
             case "PATCH":
-                if ($role == "publisher" && isset($_GET['id'])) {
-                    $id= $_GET['id'];
-                    $getArticleWithId = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
-                    $getArticleWithId->execute(array($id));
-                    //si l'article existe
-                    if ($getArticleWithId->rowCount() == 1) {
-                        //liker
-                        if (isset($_GET['like']) && !isset($_GET['dislike'])) {
-                            $selectLike = $linkpdo->prepare("SELECT * FROM liker WHERE id_article = ? AND username = ?");
-                            $selectLike->execute(array($id, $username));
-                            if ($selectLike->rowCount() == 1) {
-                                $updateLike = $linkpdo->prepare("UPDATE liker SET like_status = 1 WHERE id_article = ? AND username = ?");
-                                $updateLike->execute(array($id, $username));
-                            } else {
-                                $insertLike = $linkpdo->prepare("INSERT INTO liker (id_article, username, like_status) values (?, ?, 1)");
-                                $insertLike->execute(array($id, $username));
-                            }
-                            getPublisherID($id, 200, "Ok");
-                            //disliker
-                        } elseif (!isset($_GET['like']) && isset($_GET['dislike'])) {
-                            $selectLike = $linkpdo->prepare("SELECT * FROM liker WHERE id_article = ? AND username = ?");
-                            $selectLike->execute(array($_GET['id'], $username));
-                            if ($selectLike->rowCount() == 1) {
-                                $updateDislike = $linkpdo->prepare("UPDATE liker SET like_status = -1 WHERE id_article = ? AND username = ?");
-                                $updateDislike->execute(array($id, $username));
-                            } else {
-                                $insertDislike = $linkpdo->prepare("INSERT INTO liker (id_article, username, like_status) values (?, ?, -1)");
-                                $insertDislike->execute(array($id, $username));
-                            }
-                            getPublisherID($id, 200, "Ok");
-
-                        } else {
-                            deliver_response(400, "Bad request", null);
-                        }
-                    } else {
-                        deliver_response(404, "Not found", null);
-                    }
-                } else {
-                    deliver_response(401, "Unauthorized : Seul un utlisateur publisher peux liker un contenu", null);
+                if ($role !== 'publisher' || !isset($_GET['id'])) {
+                    deliver_response(401, 'Unauthorized: Only a publisher can like a content', null);
+                    exit;
                 }
+
+                $id = $_GET['id'];
+                $get_article = $linkpdo->prepare('SELECT * FROM article WHERE id_article = ?');
+                $get_article->execute([$id]);
+
+                if ($get_article->rowCount() != 1) {
+                    deliver_response(404, 'Not found', null);
+                    exit;
+                }
+
+                if (isset($_GET['like']) && !isset($_GET['dislike'])) {
+                    $status = 1;
+                } elseif (!isset($_GET['like']) && isset($_GET['dislike'])) {
+                    $status = -1;
+                } else {
+                    deliver_response(400, 'Bad request', null);
+                    exit;
+                }
+
+                $select_like = $linkpdo->prepare('SELECT * FROM liker WHERE id_article = ? AND username = ?');
+                $select_like->execute([$id, $username]);
+
+                if ($select_like->rowCount() === 1) {
+                    $update_like = $linkpdo->prepare('UPDATE liker SET like_status = ? WHERE id_article = ? AND username = ?');
+                    $update_like->execute([$status, $id, $username]);
+                } else {
+                    $insert_like = $linkpdo->prepare('INSERT INTO liker (id_article, username, like_status) values (?, ?, ?)');
+                    $insert_like->execute([$id, $username, $status]);
+                }
+
+                getPublisherID($id, 200, 'Ok');
+
                 break;
 
 
