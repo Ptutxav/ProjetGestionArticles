@@ -43,9 +43,18 @@ if (get_authorization_header() != null) {
                                 deliver_response(404, "Not found", null);
                             }
                         } else {
-                            $articles = $linkpdo->prepare("SELECT * FROM article");
+                            $articles = $linkpdo->prepare("SELECT article.*, 
+                            (SELECT COUNT(id_article) FROM liker WHERE liker.id_article = article.id_article AND liker.like_status = 1) as nblikes, 
+                            (SELECT COUNT(id_article) FROM liker WHERE liker.id_article = article.id_article AND liker.like_status = -1) as nbdislikes,
+                            GROUP_CONCAT(DISTINCT CASE WHEN liker.like_status = -1 THEN liker.username ELSE NULL END) as users_disliked,
+                            GROUP_CONCAT(DISTINCT CASE WHEN liker.like_status = 1 THEN liker.username ELSE NULL END) as users_liked
+                        FROM article
+                        LEFT JOIN liker ON liker.id_article = article.id_article
+                        GROUP BY article.id_article;
+                        ");
                             $articles->execute();
                             $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
+                            deliver_response(200, "get ok",$matchingData);
                         }
                         break;
 
@@ -54,17 +63,13 @@ if (get_authorization_header() != null) {
                             $id = $_GET['id'];
                             getPublisherID($id, 'Get ok !');
                         } else {
-                            //prepare
-                            $article = $linkpdo->prepare("SELECT * FROM article");
-                            $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1");
-                            $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1");
+                           //prepare
+                            $article = $linkpdo->prepare("SELECT article.*, (SELECT COUNT(id_article) FROM liker WHERE liker.id_article = article.id_article AND liker.like_status = 1) as nblikes, 
+                            (SELECT COUNT(id_article) FROM liker WHERE liker.id_article = article.id_article AND liker.like_status = -1) as nbdislikes FROM article");
                             //execute
                             $article->execute();
                             //fetch
                             if ($matchingData = $article->fetchAll(PDO::FETCH_ASSOC)) {
-                                $mes = "";
-                                    $matchingData = array_merge($matchingData, $nb_likes->fetchAll(PDO::FETCH_ASSOC));
-                                $matchingData = array_merge($matchingData, $nb_dislikes->fetchAll(PDO::FETCH_ASSOC));
                                 deliver_response(200, $mes, $matchingData);
                             } else {
                                 deliver_response(404, "Not found", null);
