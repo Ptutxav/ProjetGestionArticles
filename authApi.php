@@ -1,5 +1,5 @@
 <?php
-require ('connexion.php');
+require('config.php');
 require ('jwt_utils.php');
 
 /// Paramétrage de l'entête HTTP (pour la réponse au Client)
@@ -34,7 +34,7 @@ switch ($http_method){
 }
 
 function isValidUser ($username, $password) {
-    require('connexion.php');
+    require('config.php');
     $req = $linkpdo->prepare("SELECT password from utilisateur where username = ?");
     $req->execute(array($username));
     if ($data = $req->fetch()) {

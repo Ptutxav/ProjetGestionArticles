@@ -1,5 +1,5 @@
 <?php
-require('connexion.php');
+require('config.php');
 require("jwt_utils.php");
 
 // Identification du type de méthode HTTP envoyée par le client
@@ -260,7 +260,7 @@ function deliver_response($status, $status_message, $data)
 
 function getPublisherID($id, $code ,$mes)
 {
-    require('connexion.php');
+    require('config.php');
     //prepare
     $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
     $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?");
