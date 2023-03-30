@@ -21,23 +21,21 @@ if (get_authorization_header() != null) {
                         if (isset($_GET['id'])) {
                             $id = $_GET['id'];
                             //prepare
-                            $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
-                            $list_likes = $linkpdo->prepare("SELECT liker.username as list_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?;");
-                            $list_dislikes = $linkpdo->prepare("SELECT liker.username as list_dislike FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?;");
-                            $nb_likes = $linkpdo->prepare("SELECT count(liker.username) as nb_likes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = 1 AND liker.id_article = ?;");
-                            $nb_dislikes = $linkpdo->prepare("SELECT count(liker.username) as nb_dislikes FROM liker, article WHERE liker.id_article = article.id_article AND like_status = -1 AND liker.id_article = ?;");
+                            $article = $linkpdo->prepare("SELECT article.*, 
+                            (SELECT COUNT(id_article) FROM liker WHERE liker.id_article = article.id_article AND liker.like_status = 1 AND liker.id_article = ?) as nb_likes, 
+                            (SELECT COUNT(id_article) FROM liker WHERE liker.id_article = article.id_article AND liker.like_status = -1 AND liker.id_article = ?) as nb_dislikes,
+                            GROUP_CONCAT(DISTINCT CASE WHEN liker.like_status = -1 AND liker.id_article = ? THEN liker.username ELSE NULL END) as users_disliked,
+                            GROUP_CONCAT(DISTINCT CASE WHEN liker.like_status = 1 AND liker.id_article = ? THEN liker.username ELSE NULL END) as users_liked
+                            FROM article
+                            LEFT JOIN liker ON liker.id_article = article.id_article
+                            WHERE article.id_article = ?
+                            GROUP BY article.id_article;
+                            ");
                             //execute
-                            $article->execute(array($id));
-                            $list_likes->execute(array($id));
-                            $list_dislikes->execute(array($id));
-                            $nb_likes->execute(array($id));
-                            $nb_dislikes->execute(array($id));
+                            $article->execute(array($id, $id, $id, $id, $id));
                             //fetch
-                            if ($matchingData = $article->fetch(PDO::FETCH_ASSOC)) {
-                                $matchingData = array_merge($matchingData, $list_likes->fetchAll(PDO::FETCH_ASSOC));
-                                $matchingData = array_merge($matchingData, $list_dislikes->fetchAll(PDO::FETCH_ASSOC));
-                                $matchingData = array_merge($matchingData, $nb_likes->fetch(PDO::FETCH_ASSOC));
-                                $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
+                            $matchingData = $article->fetch(PDO::FETCH_ASSOC);
+                            if($article->rowCount() == 1) {
                                 deliver_response(200, "GET OK", $matchingData);
                             } else {
                                 deliver_response(404, "Not found", null);
@@ -48,10 +46,10 @@ if (get_authorization_header() != null) {
                             (SELECT COUNT(id_article) FROM liker WHERE liker.id_article = article.id_article AND liker.like_status = -1) as nbdislikes,
                             GROUP_CONCAT(DISTINCT CASE WHEN liker.like_status = -1 THEN liker.username ELSE NULL END) as users_disliked,
                             GROUP_CONCAT(DISTINCT CASE WHEN liker.like_status = 1 THEN liker.username ELSE NULL END) as users_liked
-                        FROM article
-                        LEFT JOIN liker ON liker.id_article = article.id_article
-                        GROUP BY article.id_article;
-                        ");
+                            FROM article
+                            LEFT JOIN liker ON liker.id_article = article.id_article
+                            GROUP BY article.id_article;
+                            ");
                             $articles->execute();
                             $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
                             deliver_response(200, "get ok",$matchingData);
