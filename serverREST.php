@@ -61,7 +61,7 @@ if (get_authorization_header() != null) {
                     case "publisher":
                         if (isset($_GET['id'])) {
                             $id = $_GET['id'];
-                            getPublisherID($id, 'Get ok !');
+                            getPublisherID($id,200, 'Get ok !');
                         } else {
                            //prepare
                             $article = $linkpdo->prepare("SELECT article.*, (SELECT COUNT(id_article) FROM liker WHERE liker.id_article = article.id_article AND liker.like_status = 1) as nblikes, 
@@ -70,7 +70,7 @@ if (get_authorization_header() != null) {
                             $article->execute();
                             //fetch
                             if ($matchingData = $article->fetchAll(PDO::FETCH_ASSOC)) {
-                                deliver_response(200, $mes, $matchingData);
+                                deliver_response(200, "get ok", $matchingData);
                             } else {
                                 deliver_response(404, "Not found", null);
                             }
@@ -92,15 +92,16 @@ if (get_authorization_header() != null) {
                             break;
                         }
                         $pubId = $linkpdo->lastInsertId();
-                        getPublisher($pubId, 'article ajouté avec succès');
+                        getPublisher($pubId, 201,'article ajouté avec succès');
                     }
                 }
                 break;
 
             case "PUT":
                 if ($role == "publisher" && isset($_GET['id'])) {
+                    $id = $_GET['id'];
                     $getArticleWithId = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
-                    $getArticleWithId->execute(array($_GET['id']));
+                    $getArticleWithId->execute(array($id));
                     //si l'article existe
                     if ($getArticleWithId->rowCount() == 1) {
                         $dataUsername = $getArticleWithId->fetch();
@@ -112,7 +113,7 @@ if (get_authorization_header() != null) {
                             if ($contenu != null) {
                                 $updateArticle = $linkpdo->prepare("UPDATE article SET contenu = ? WHERE id_article = ?");
                                 $updateArticle->execute(array($contenu, $_GET['id']));
-                                deliver_response(201, "Update successful", null);
+                                getPublisherID($id, 200,"update success");
                             } else {
                                 deliver_response(400, "Bad request : contenu null", null);
                             }
@@ -121,40 +122,41 @@ if (get_authorization_header() != null) {
                         deliver_response(404, "Not found", null);
                     }
                 } else {
-                    deliver_response(401, "Unauthorized", null);
+                    deliver_response(401, "Unauthorized : seul un utilisateur publisher peut modifier son article", null);
                 }
                 break;
 
             case "PATCH":
                 if ($role == "publisher" && isset($_GET['id'])) {
+                    $id= $_GET['id'];
                     $getArticleWithId = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
-                    $getArticleWithId->execute(array($_GET['id']));
+                    $getArticleWithId->execute(array($id));
                     //si l'article existe
                     if ($getArticleWithId->rowCount() == 1) {
                         //liker
                         if (isset($_GET['like']) && !isset($_GET['dislike'])) {
                             $selectLike = $linkpdo->prepare("SELECT * FROM liker WHERE id_article = ? AND username = ?");
-                            $selectLike->execute(array($_GET['id'], $username));
-                            if ($selectLike->rowCount() >= 1) {
+                            $selectLike->execute(array($id, $username));
+                            if ($selectLike->rowCount() == 1) {
                                 $updateLike = $linkpdo->prepare("UPDATE liker SET like_status = 1 WHERE id_article = ? AND username = ?");
-                                $updateLike->execute(array($_GET['id'], $username));
+                                $updateLike->execute(array($id, $username));
                             } else {
                                 $insertLike = $linkpdo->prepare("INSERT INTO liker (id_article, username, like_status) values (?, ?, 1)");
-                                $insertLike->execute(array($_GET['id'], $username));
+                                $insertLike->execute(array($id, $username));
                             }
-                            deliver_response(200, "OK", null);
+                            getPublisherID($id, 200, "Ok");
                             //disliker
                         } elseif (!isset($_GET['like']) && isset($_GET['dislike'])) {
                             $selectLike = $linkpdo->prepare("SELECT * FROM liker WHERE id_article = ? AND username = ?");
                             $selectLike->execute(array($_GET['id'], $username));
-                            if ($selectLike->rowCount() >= 1) {
+                            if ($selectLike->rowCount() == 1) {
                                 $updateDislike = $linkpdo->prepare("UPDATE liker SET like_status = -1 WHERE id_article = ? AND username = ?");
-                                $updateDislike->execute(array($_GET['id'], $username));
+                                $updateDislike->execute(array($id, $username));
                             } else {
                                 $insertDislike = $linkpdo->prepare("INSERT INTO liker (id_article, username, like_status) values (?, ?, -1)");
-                                $insertDislike->execute(array($_GET['id'], $username));
+                                $insertDislike->execute(array($id, $username));
                             }
-                            deliver_response(200, "OK", null);
+                            getPublisherID($id, 200, "Ok");
 
                         } else {
                             deliver_response(400, "Bad request", null);
@@ -163,7 +165,7 @@ if (get_authorization_header() != null) {
                         deliver_response(404, "Not found", null);
                     }
                 } else {
-                    deliver_response(401, "Unauthorized", null);
+                    deliver_response(401, "Unauthorized : Seul un utlisateur publisher peux liker un contenu", null);
                 }
                 break;
 
@@ -181,7 +183,7 @@ if (get_authorization_header() != null) {
                                 deliver_response(200, "OK : suppression effectuée avec succès", NULL);
                             }
                         } else {
-                            deliver_response(400, "Bad request : id incorrect", NULL);
+                            deliver_response(400, "Bad request : Saisir l'identifiant", NULL);
                         }
                         break;
                     case "publisher":
@@ -194,7 +196,7 @@ if (get_authorization_header() != null) {
                                 deliver_response(200, "OK : suppression effectuée avec succès", NULL);
                             }
                         } else {
-                            deliver_response(400, "Bad request : id incorrect", NULL);
+                            deliver_response(400, "Bad request : Saisir l'identifiant", NULL);
                         }
                         break;
                 }
@@ -203,7 +205,7 @@ if (get_authorization_header() != null) {
             // Cas d'une autre méthode
             default:
                 // Envoi de la réponse au Client
-                deliver_response(501, "Méthode non supportée", NULL);
+                deliver_response(501, "Not Implemented : Méthode non supportée", NULL);
                 break;
         }
         //token invalide ou expiré
@@ -244,7 +246,7 @@ function deliver_response($status, $status_message, $data)
     echo $json_response;
 }
 
-function getPublisherID($id, $mes)
+function getPublisherID($id, $code ,$mes)
 {
     require('connexion.php');
     //prepare
@@ -259,7 +261,7 @@ function getPublisherID($id, $mes)
     if ($matchingData = $article->fetch(PDO::FETCH_ASSOC)) {
         $matchingData = array_merge($matchingData, $nb_likes->fetch(PDO::FETCH_ASSOC));
         $matchingData = array_merge($matchingData, $nb_dislikes->fetch(PDO::FETCH_ASSOC));
-        deliver_response(200, $mes, $matchingData);
+        deliver_response($code, $mes, $matchingData);
     } else {
         deliver_response(404, "Not found", null);
     }
