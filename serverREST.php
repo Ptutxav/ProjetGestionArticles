@@ -102,8 +102,7 @@ if (get_authorization_header() != null) {
                     $getArticleWithId = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
                     $getArticleWithId->execute(array($_GET['id']));
                     //si l'article existe
-<<<<<<< Updated upstream
-                    if ($getArticleWithId->rowCount() >= 1) {
+                    if ($getArticleWithId->rowCount() == 1) {
                         $dataUsername = $getArticleWithId->fetch();
                         $usernameToCompare = $dataUsername['username'];
                         if ($usernameToCompare == $username) {
@@ -131,10 +130,7 @@ if (get_authorization_header() != null) {
                     $getArticleWithId = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
                     $getArticleWithId->execute(array($_GET['id']));
                     //si l'article existe
-                    if ($getArticleWithId->rowCount() >= 1) {
-=======
                     if ($getArticleWithId->rowCount() == 1) {
->>>>>>> Stashed changes
                         //liker
                         if (isset($_GET['like']) && !isset($_GET['dislike'])) {
                             $selectLike = $linkpdo->prepare("SELECT * FROM liker WHERE id_article = ? AND username = ?");
@@ -170,6 +166,7 @@ if (get_authorization_header() != null) {
                     deliver_response(401, "Unauthorized", null);
                 }
                 break;
+
 
             case "DELETE":
                 switch ($role) {
