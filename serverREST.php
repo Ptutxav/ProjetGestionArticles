@@ -214,13 +214,27 @@ if (get_authorization_header() != null) {
 } else {
     switch ($http_method) {
         case "GET":
-            //prepare
-            $articles = $linkpdo->prepare("SELECT * FROM article");
-            //execute
-            $articles->execute();
-            //fetch
-            $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
-            deliver_response(200, "GET OK", $matchingData);
+            if(isset($_GET['id'])) {
+                //prepare
+                $article = $linkpdo->prepare("SELECT * FROM article WHERE id_article = ?");
+                //execute
+                $article->execute(array($_GET['id']));
+                if($article->rowCount() != 1) {
+                    deliver_response(404, "Not found", null);
+                    break;
+                }
+                //fetch
+                $matchingData = $article->fetchAll(PDO::FETCH_ASSOC);
+                deliver_response(200, "GET OK", $matchingData);
+            } else {
+                //prepare
+                $articles = $linkpdo->prepare("SELECT * FROM article");
+                //execute
+                $articles->execute();
+                //fetch
+                $matchingData = $articles->fetchAll(PDO::FETCH_ASSOC);
+                deliver_response(200, "GET OK", $matchingData);
+            }
             break;
 
         default:
