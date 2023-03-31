@@ -6,6 +6,32 @@ Authentification :
 POST
 http://localhost/ProjetGestionArticles/authApi.php
 
+Comptes :
+
+Modérateur
+{
+    "username":"mod",
+    "password":"1234"
+}
+
+Publisher 1
+{
+    "username":"pub1",
+    "password":"1234"
+}
+
+Publisher 2
+{
+    "username":"pub2",
+    "password":"1234"
+}
+
+Publisher 3
+{
+    "username":"pub3",
+    "password":"1234"
+}
+
 
 Serveur : 
 
