@@ -1,12 +1,14 @@
 # ProjetGestionArticles
  Conception et développement d’API RESpour la gestion d’articles
 
-Authentification
+Authentification :
+
 POST
 http://localhost/ProjetGestionArticles/authApi.php
 
 
-serveur
+Serveur : 
+
 GET
 http://localhost/ProjetGestionArticles/serverRest.php
 With id :
