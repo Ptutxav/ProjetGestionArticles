@@ -90,7 +90,7 @@ if (get_authorization_header() != null) {
                             break;
                         }
                         $pubId = $linkpdo->lastInsertId();
-                        getPublisher($pubId, 201,'article ajouté avec succès');
+                        getPublisherID($pubId, 201,'article ajouté avec succès');
                     }
                 }
                 break;
