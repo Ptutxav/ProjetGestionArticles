@@ -11,6 +11,7 @@ GET
 http://localhost/ProjetGestionArticles/serverRest.php
 With id :
 http://localhost/ProjetGestionArticles/serverRest.php?id=
+
 POST
 http://localhost/ProjetGestionArticles/serverRest.php
 
