@@ -1,5 +1,5 @@
 # ProjetGestionArticles
- Conception et développement d’API RESpour la gestion d’articles
+ Conception et développement d’API REST pour la gestion d’articles
 
 Authentification :
 
