@@ -30,7 +30,7 @@ switch ($http_method){
     break;
 
     default :
-        deliver_response(400, "requete http reçue non traitée par le serveur", NULL);
+        deliver_response(501, "requete http reçue non traitée par le serveur", NULL);
 }
 
 function isValidUser ($username, $password) {
